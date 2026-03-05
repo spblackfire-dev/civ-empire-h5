@@ -3,25 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>文明帝国 - v0.1.2</title>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="https://unpkg.com/pinia@2/dist/pinia.iife.prod.js"></script>
-  <script src="https://unpkg.com/pixi.js@8/dist/pixi.min.js"></script>
+  <title>文明帝国 - v0.1.2 完整测试</title>
   <style>
-    body { margin:0; background:#111; color:#eee; font-family:sans-serif; overflow:hidden; height:100vh; }
-    #app { height:100%; display:flex; flex-direction:column; }
-    header { background:rgba(0,0,0,0.8); padding:10px; display:flex; justify-content:space-between; align-items:center; }
-    .resources { display:flex; gap:20px; font-size:18px; }
-    .resource { display:flex; align-items:center; gap:6px; }
-    .buildings { flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:16px; padding:16px; background:#1a1a1a; }
-    .building { background:#333; border:2px solid #555; border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:0.2s; }
-    .building:hover { border-color:#aaa; transform:scale(1.05); }
-    .modal { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:10; }
-    .modal-content { background:#222; padding:24px; border-radius:12px; width:320px; max-width:90%; color:#eee; }
-    .bar { height:20px; background:#333; border-radius:10px; overflow:hidden; margin:8px 0; }
-    .bar-fill { height:100%; transition:width 0.5s; }
-    button { background:#444; color:#eee; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; margin:4px; }
+    body { margin:0; background:#111; color:#eee; font-family:system-ui, sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+    header { background:rgba(0,0,0,0.8); padding:12px; display:flex; justify-content:space-between; align-items:center; font-size:16px; }
+    .resources { display:flex; gap:16px; }
+    .resource { display:flex; align-items:center; gap:6px; background:#333; padding:6px 12px; border-radius:6px; }
+    .buildings { flex:1; display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; padding:12px; background:#1a1a1a; overflow-y:auto; }
+    .building { background:#2a2a2a; border:2px solid #444; border-radius:8px; padding:12px; text-align:center; cursor:pointer; transition:0.2s; }
+    .building:hover { border-color:#777; transform:scale(1.03); }
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10; }
+    .modal-content { background:#1e1e1e; padding:24px; border-radius:12px; width:340px; max-width:90%; box-shadow:0 0 20px rgba(0,0,0,0.8); }
+    .bar { height:24px; background:#333; border-radius:12px; overflow:hidden; margin:8px 0; }
+    .bar-fill { height:100%; transition:width 0.6s ease; }
+    button { background:#444; color:#eee; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; margin:6px 4px 0 0; }
     button:hover { background:#555; }
+    input[type=number] { width:60px; padding:6px; background:#333; color:#eee; border:1px solid #555; border-radius:4px; }
   </style>
 </head>
 <body>
@@ -29,115 +26,96 @@
     <header>
       <div>文明帝国 v0.1.2</div>
       <div class="resources">
-        <div class="resource">🍎 {{ resources.food.toFixed(0) }}</div>
-        <div class="resource">🌳 {{ resources.wood.toFixed(0) }}</div>
-        <div class="resource">🪨 {{ resources.stone.toFixed(0) }}</div>
-        <div class="resource">💰 {{ resources.gold.toFixed(0) }}</div>
+        <div class="resource">🍎 {{ resources.food | 0 }}</div>
+        <div class="resource">🌳 {{ resources.wood | 0 }}</div>
+        <div class="resource">🪨 {{ resources.stone | 0 }}</div>
+        <div class="resource">💰 {{ resources.gold | 0 }}</div>
       </div>
-      <div>人口: {{ population.current }} / {{ population.max }} (闲置: {{ population.idle }})</div>
+      <div>人口: {{ population.current }} / {{ population.max }} (闲置 {{ population.idle }})</div>
     </header>
 
-    <div class="bar"><div class="bar-fill" :style="{width: happiness + '%', background: happiness > 70 ? '#3f3' : happiness > 30 ? '#ff3' : '#f33'}"></div></div>
+    <div class="bar"><div class="bar-fill" :style="{width: happiness + '%', background: happiness > 80 ? '#4caf50' : happiness > 50 ? '#ffeb3b' : '#f44336'}"></div></div>
 
     <div class="buildings">
-      <div v-for="(b, i) in buildings" :key="i" class="building" @click="showModal(i)">
-        <div>{{ b.name }} Lv{{ b.level }}</div>
-        <div>工人: {{ b.workers }}</div>
+      <div v-for="(building, index) in buildings" :key="index" class="building" @click="openModal(index)">
+        <div>{{ building.name }} Lv{{ building.level }}</div>
+        <div>工人: {{ building.workers }}</div>
+        <div>产出: +{{ building.prodPerTick * building.workers | 0 }}/5s</div>
       </div>
     </div>
 
-    <div v-if="modalVisible" class="modal" @click.self="modalVisible = false">
+    <div v-if="modalOpen" class="modal" @click.self="modalOpen = false">
       <div class="modal-content">
-        <h3>{{ buildings[selected].name }} Lv{{ buildings[selected].level }}</h3>
-        <p>产出加成: x{{ buildings[selected].workers }}</p>
-        <button @click="upgrade(selected)">升级 (消耗 50 木材 + 50 石头)</button>
-        <div>分配工人: <input type="number" v-model.number="assignAmount" min="0" :max="population.idle" style="width:60px;" /></div>
-        <button @click="assignWorker(selected)">确认分配</button>
-        <button @click="modalVisible = false">关闭</button>
+        <h2>{{ buildings[selected].name }} Lv{{ buildings[selected].level }}</h2>
+        <p>当前工人: {{ buildings[selected].workers }}</p>
+        <p>升级消耗: 50木材 + 50石头 (Lv{{ buildings[selected].level + 1 }})</p>
+        <button @click="upgrade(selected)">升级</button>
+        <div style="margin:16px 0;">
+          分配工人: <input type="number" v-model.number="assignNum" min="0" :max="population.idle" />
+          <button @click="assign(selected)">确认</button>
+        </div>
+        <button @click="modalOpen = false" style="background:#555;">关闭</button>
       </div>
     </div>
-
-    <canvas id="particle-canvas" style="position:fixed; inset:0; pointer-events:none; z-index:5;"></canvas>
   </div>
 
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script>
     const { createApp, ref, onMounted } = Vue;
-    const app = createApp({
-      setup() {
-        const resources = ref({ food: 200, wood: 150, stone: 100, gold: 50 });
-        const population = ref({ current: 10, max: 10, idle: 10 });
-        const happiness = ref(60);
-        const buildings = ref([
-          { name: '农场', level: 1, workers: 0, baseProd: 5 },
-          { name: '狩猎营', level: 1, workers: 0, baseProd: 4 },
-          { name: '矿坑', level: 1, workers: 0, baseProd: 3 },
-          { name: '民房', level: 1, workers: 0, baseProd: 0 }
-        ]);
-        const modalVisible = ref(false);
-        const selected = ref(0);
-        const assignAmount = ref(0);
 
-        // 粒子画布
-        const appPixi = new PIXI.Application({ backgroundAlpha: 0, resizeTo: window });
-        document.getElementById('particle-canvas').appendChild(appPixi.view);
+    createApp({
+      setup() {
+        const resources = ref({ food: 300, wood: 200, stone: 150, gold: 80 });
+        const population = ref({ current: 15, max: 20, idle: 15 });
+        const happiness = ref(65);
+        const buildings = ref([
+          { name: '农场', level: 1, workers: 0, prodPerTick: 5 },
+          { name: '狩猎营', level: 1, workers: 0, prodPerTick: 4 },
+          { name: '矿坑', level: 1, workers: 0, prodPerTick: 3 },
+          { name: '民房', level: 1, workers: 0, prodPerTick: 0 }
+        ]);
+        const modalOpen = ref(false);
+        const selected = ref(0);
+        const assignNum = ref(0);
 
         const tick = () => {
           buildings.value.forEach(b => {
-            if (b.baseProd > 0) {
-              const prod = b.baseProd * b.workers * (happiness.value / 100);
-              if (b.name === '农场') resources.value.food += prod;
-              if (b.name === '狩猎营') resources.value.wood += prod;
-              if (b.name === '矿坑') resources.value.stone += prod;
-              // 粒子反馈
-              for (let i = 0; i < 5; i++) {
-                const p = new PIXI.Graphics().beginFill(0xffffff).drawCircle(0,0,3).endFill();
-                p.x = Math.random() * window.innerWidth;
-                p.y = window.innerHeight;
-                p.vy = -Math.random() * 2 - 1;
-                appPixi.stage.addChild(p);
-                appPixi.ticker.addOnce(() => p.destroy(), {}, 60);
-              }
-            }
+            const prod = b.prodPerTick * b.workers * (happiness.value / 100);
+            if (b.name === '农场') resources.value.food += prod;
+            if (b.name === '狩猎营') resources.value.wood += prod;
+            if (b.name === '矿坑') resources.value.stone += prod;
           });
-          happiness.value = Math.max(0, Math.min(100, happiness.value + (population.value.idle > 0 ? -0.5 : 0.2)));
+          happiness.value = Math.max(10, Math.min(100, happiness.value + (population.value.idle > 5 ? -0.8 : 0.3)));
         };
 
-        const upgrade = (i) => {
-          if (resources.value.wood >= 50 && resources.value.stone >= 50 && buildings.value[i].level < 5) {
-            resources.value.wood -= 50;
-            resources.value.stone -= 50;
-            buildings.value[i].level++;
-            alert('升级成功！');
-          } else {
-            alert('资源不足！');
-          }
+        const upgrade = (idx) => {
+          const b = buildings.value[idx];
+          if (b.level >= 5) return alert('已满级');
+          if (resources.value.wood < 50 || resources.value.stone < 50) return alert('资源不足');
+          resources.value.wood -= 50;
+          resources.value.stone -= 50;
+          b.level++;
+          alert('升级成功！产出提升');
         };
 
-        const assignWorker = (i) => {
-          if (assignAmount.value > 0 && assignAmount.value <= population.value.idle) {
-            buildings.value[i].workers += assignAmount.value;
-            population.value.idle -= assignAmount.value;
-            alert(`分配了 ${assignAmount.value} 名工人！`);
-          }
-          assignAmount.value = 0;
+        const assign = (idx) => {
+          if (assignNum.value <= 0 || assignNum.value > population.value.idle) return alert('分配数量无效');
+          buildings.value[idx].workers += assignNum.value;
+          population.value.idle -= assignNum.value;
+          assignNum.value = 0;
+          alert('分配成功！');
         };
 
-        const showModal = (i) => {
-          selected.value = i;
-          modalVisible.value = true;
+        const openModal = (idx) => {
+          selected.value = idx;
+          modalOpen.value = true;
         };
 
-        onMounted(() => {
-          setInterval(tick, 5000);
-        });
+        onMounted(() => setInterval(tick, 5000));
 
-        return {
-          resources, population, happiness, buildings, modalVisible, selected, assignAmount,
-          upgrade, assignWorker, showModal
-        };
+        return { resources, population, happiness, buildings, modalOpen, selected, assignNum, upgrade, assign, openModal };
       }
-    });
-    app.mount('#app');
+    }).mount('#app');
   </script>
 </body>
 </html>
