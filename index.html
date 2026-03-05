@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文明帝国 - 测试页</title>
+  <style>
+    body { margin:0; background:#111; color:#eee; font-family:sans-serif; height:100vh; display:flex; flex-direction:column; }
+    header { background:#222; padding:10px; display:flex; justify-content:space-between; }
+    .resources span { margin-right:20px; }
+    .buildings { flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:20px; padding:20px; }
+    .building { background:#444; padding:20px; text-align:center; border-radius:8px; cursor:pointer; }
+    .building:hover { background:#555; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>文明帝国 v0.1.2 测试</div>
+    <div class="resources">
+      <span>食物: <span id="food">100</span></span>
+      <span>木材: <span id="wood">100</span></span>
+      <span>石头: <span id="stone">50</span></span>
+      <span>金币: <span id="gold">0</span></span>
+    </div>
+  </header>
+
+  <div class="buildings">
+    <div class="building" onclick="alert('点击农场')">农场 Lv1</div>
+    <div class="building" onclick="alert('点击狩猎营')">狩猎营 Lv1</div>
+    <div class="building" onclick="alert('点击矿坑')">矿坑 Lv1</div>
+    <div class="building" onclick="alert('点击民房')">民房 Lv1</div>
+  </div>
+
+  <script>
+    let food = 100, wood = 100, stone = 50, gold = 0;
+    setInterval(() => {
+      food += 5;
+      wood += 3;
+      stone += 2;
+      gold += 1;
+      document.getElementById('food').textContent = food;
+      document.getElementById('wood').textContent = wood;
+      document.getElementById('stone').textContent = stone;
+      document.getElementById('gold').textContent = gold;
+    }, 5000);
+  </script>
+</body>
+</html>
